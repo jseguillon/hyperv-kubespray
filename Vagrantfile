@@ -60,7 +60,7 @@ Vagrant.configure(2) do |config|
 cat /home/vagrant/.ssh/me.pub >> /home/vagrant/.ssh/authorized_keys
 (apt-get -y update && apt-get -y upgrade && apt -y install python) || (yum -y clean all && yum makecache && yum -y update && yum -y install python)
 echo "[keyfile]" > /etc/NetworkManager/conf.d/planes.conf || true
-echo "unmanaged-devices=interface-name:eth1;interface-name:eth2" > /etc/NetworkManager/conf.d/planes.conf || true
+echo "unmanaged-devices=interface-name:eth1;interface-name:eth2" >> /etc/NetworkManager/conf.d/planes.conf || true
 swapoff -a
 SHELL
 
