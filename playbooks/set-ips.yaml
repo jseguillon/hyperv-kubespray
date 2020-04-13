@@ -35,7 +35,7 @@
       cmd: ifup eth1
     when: ansible_os_family == 'RedHat'
     #TODO : Ubuntu now
-  - name: Ubuntu/Debian remove ant old lease
+  - name: Ubuntu/Debian remove old leases
     shell: rm -f /var/lib/NetworkManager/*.lease
     when: ansible_os_family == 'Debian'
   - name: Ubuntu/Debian | force netplan adding ip on eth1
