@@ -1,5 +1,3 @@
-# dont'forget to : `Set-ExecutionPolicy unrestricted` prior to exec
-
 Param ( [String]$vmName = $(throw "-vmName is required."),
         [String]$macAddrCtrlPlane = $(throw "-macAddrCtrlPlane is required."))
 
@@ -14,3 +12,5 @@ If ($countItf -ne 1) {
 Else {
   echo "Itf already on this VM"
 }
+
+# dont'forget to : `Set-ExecutionPolicy unrestricted` prior to exec
