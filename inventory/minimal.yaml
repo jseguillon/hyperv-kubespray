@@ -1,24 +1,13 @@
 all:
   hosts:
-    k8s-etcd-1:
+    k8s-master-etcd-1.mshome.net:
       etcd_member_name: etcd-1
       ip: 10.233.1.2
-    k8s-etcd-2:
-      k8s-etcd_member_name: etcd-2
+    k8s-node-1.mshome.net:
       ip: 10.233.1.3
-    k8s-master-1:
-      ip: 10.233.1.4
-    k8s-master-2:
-      ip: 10.233.1.5
-    k8s-master-node-etcd-1:
-      k8s-etcd_member_name: etcd-3
-      ip: 10.233.1.6
-    k8s-node-1:
-      ip: 10.233.1.7
-    k8s-node-2:
-      ip: 10.233.1.8
   vars:
       ansible_user: vagrant
+      ansible_ssh_pass: vagrant
       ansible_connection: ssh
       nodes_netplan_netmask: "24" # for easy netplan config
       nodes_icfg_netmask: "255.255.255.0" # for easy ifcg config
@@ -26,22 +15,19 @@ all:
       metrics_server_enabled: True
       dashboard_enabled: True
       ingress_nginx_enabled: True
+
+      #Dont apply .mshome.net domain on /etc/hostname
       override_system_hostname: False
-      docker_version: "19.03"
+      docker_version: "19.03" #/!\ Ubunutu 18 
   children:   # key order does not matter, indentation does
     k8s-cluster:
       children:
         etcd:
           hosts:
-            k8s-etcd-1:
-            k8s-etcd-2:
-            k8s-master-node-etcd-1:
+            k8s-master-etcd-1.mshome.net:
         kube-master:
           hosts:
-            k8s-master-1:
-            k8s-master-2:
-            k8s-master-node-etcd-1:
+            k8s-master-etcd-1.mshome.net:
         kube-node:
           hosts:
-            k8s-node-1:
-            k8s-node-2:
+            k8s-node-1.mshome.net:

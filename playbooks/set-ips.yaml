@@ -34,11 +34,11 @@
     shell:
       cmd: ifup eth1
     when: ansible_os_family == 'RedHat'
-    #TODO : Ubuntu now
+    
   - name: Ubuntu/Debian remove old leases
     shell: rm -f /var/lib/NetworkManager/*.lease
-    when: ansible_os_family == 'Debian'
-  - name: Ubuntu/Debian | force netplan adding ip on eth1
+    when: ansible_distribution == 'Ubuntu'
+  - name: Ubuntu | force netplan adding ip on eth1
     copy:
       dest: /etc/netplan/01-netcfg.yaml
       content: |
@@ -50,21 +50,37 @@
                     dhcp4: true
                     dhcp6: false
                     optional: true
-                    nameservers:
-                      addresses: [4.2.2.1, 4.2.2.2, 208.67.220.220]
+                    #nameservers:
+                    #  addresses: [8.8.8.8, 7.7.7.7]
                   eth1:
                     dhcp4: false
                     dhcp6: false
                     optional: true
                     addresses: [{{ ip }}/{{ nodes_netplan_netmask }}]
-    when: ansible_os_family == 'Debian'
+    when: ansible_distribution == 'Ubuntu'
   - name: Ubuntu/Debian | netplan apply
     shell:
       cmd: netplan apply
-    when: ansible_os_family == 'Debian'
-  - name: now reboot
+    when: ansible_distribution == 'Ubuntu'
+  - name: "Ubuntu : mitigate https://askubuntu.com/questions/973017/wrong-nameserver-set-by-resolvconf-and-networkmanager/974482#974482" 
+    shell: "sudo rm -f /etc/resolv.conf && sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf"
+    when: ansible_distribution == 'Ubuntu'
+    
+  - name: Debian | set ip 
+    blockinfile:
+      dest: /etc/network/interfaces
+      content: |
+               auto eth1
+               iface eth1 inet static
+               address {{ ip }}     
+               netmask 255.255.255.0
+               
+    when: ansible_distribution == 'Debian'
+
+  - name: now reboot all 
     reboot:
-  - name: check internet access OK
+    
+  - name: check internet access still OK
     uri:
       url: https://github.com
     tags:
