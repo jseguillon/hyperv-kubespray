@@ -1,5 +1,25 @@
-Param ( [String]$vmName = $(throw "-vmName is required."),
-        [String]$macAddrCtrlPlane = $(throw "-macAddrCtrlPlane is required."))
+Param ( [parameter( ValueFromPipeline )]
+        [String]$vmName = "",
+        [parameter( ValueFromPipeline )]
+        [String]$macAddrCtrlPlane = "",
+        [switch]$Help
+      )
+
+# $(throw "-vmName is required.")
+# $(throw "-macAddrCtrlPlane is required."
+If ( $Help ) {
+  exit 0
+}
+
+If ( $vmName -eq "" ) {
+  echo "No vm name => skipping"
+  exit 0
+}
+
+If ( $macAddrCtrlPlane -eq "" ) {
+  echo "No mac => exiting error"
+  exit -1
+}
 
 $countItf=(Get-VMNetworkAdapter -VMName $vmName | Where-Object {$_.MacAddress -match $macAddrCtrlPlane}).count
 
