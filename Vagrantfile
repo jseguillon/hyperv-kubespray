@@ -3,12 +3,12 @@
 
 # To be tested
 #UBUNTU20_BOX = "generic/ubuntu2004" => pb with could not load host key: /etc/ssh/ssh_host_ecdsa_key
-UBUNTU19_BOX = "generic/ubuntu1910"
-UBUNTU18_BOX = "generic/ubuntu1810"
-CENTOS8_BOX = "generic/centos8"
-DEBIAN10_BOX = "generic/debian10"
+UBUNTU19 = "generic/ubuntu1910"
+UBUNTU18 = "generic/ubuntu1810"
+CENTOS8 = "generic/centos8"
+DEBIAN10 = "generic/debian10"
 
-config = File.join(File.dirname(__FILE__), ENV['K8S_CONFIG'] || 'minimal')
+config = File.join(File.dirname(__FILE__), "vagrants", ENV['K8S_CONFIG'] || 'minimal')
 
 config += ".vagrant.rb"
 

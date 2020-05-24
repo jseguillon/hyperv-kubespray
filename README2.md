@@ -1,5 +1,6 @@
- docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook --become -i /opt/hyperv-kubespray/inventory/minimal.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml
- 
+.\hyperv-kuspray.ps1 all xs 
+.\hyperv-kuspray.ps1 restore
+
  # mount and set temp for downloads 
  TODO : 
  

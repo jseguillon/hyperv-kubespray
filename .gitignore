@@ -2,3 +2,4 @@ venv
 .vagrant
 inventory/credentials/
 playbooks/*.retry
+**/**.log

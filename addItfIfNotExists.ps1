@@ -5,8 +5,6 @@ Param ( [parameter( ValueFromPipeline )]
         [switch]$Help
       )
 
-# $(throw "-vmName is required.")
-# $(throw "-macAddrCtrlPlane is required."
 If ( $Help ) {
   exit 0
 }

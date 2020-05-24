@@ -6,6 +6,7 @@ all:
     k8s-server-2.mshome.net:
       ip: 10.233.1.3
   vars:
+    ## TODO : set as exta vars 
       ansible_user: vagrant
       ansible_ssh_pass: vagrant
       ansible_connection: ssh
