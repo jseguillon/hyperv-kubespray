@@ -7,7 +7,7 @@ param (
     [string]$KubernetesEnv = "",
     [parameter( ValueFromPipeline )]
     [ValidateSet('generic/centos8', 'generic/debian10', 'None')]
-    [string]$PreferredOs = 'none',
+    [string]$PreferredOs = 'None',
 	[switch]$Hide,
 	[switch]$Help
 )
@@ -30,11 +30,13 @@ if ( ("all", "destroy", "up,", "prepare", "install") -contains "$Command" ){
 }
 
 if ( $PreferredOs -ne "None" ) {
-    $KubernetesEnv:K8S_BOX = "$PreferredOs"
+    $Env:K8S_BOX = "$PreferredOs"
 }
-
+else {
+    $Env:K8S_BOX = ""
+}
 # Inject vagrant
-$KubernetesEnv:K8S_CONFIG = "$KubernetesEnv"
+$Env:K8S_CONFIG = "$KubernetesEnv"
 
 echo ( "** Logs : $LaunchLog" )  
 echo ( "** Applying '{0}' on env *** {1} *** (PreferredOS='$PreferredOs')" -f ($Command, "$KubernetesEnv")) | tee -a "$LaunchLog"
@@ -91,7 +93,6 @@ function up( ) {
 }
 
 function prepare( ) {
-    # TODO : Inject Debug for vvv
     echo ( "** launching ansible-playbook --become -i /.../$KubernetesEnv.yaml /.../playbooks/$KubernetesEnv.yaml " ) | tee -a "$LaunchLog"
     docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml | tee -a $LaunchLog
     if (!$?) { exit -1 }
@@ -99,7 +100,6 @@ function prepare( ) {
 
 function install( ) {
     # TODO : set and dowload cache dire 
-    # TODO : Inject Debug for vvv
     echo ( "** launching ansible-playbook --become -i /.../minimal.yaml /.../cluster.yml" ) | tee -a "$LaunchLog"
     docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt && ansible-playbook $AnsibleDebug  --become -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml" | tee -a $LaunchLog
     if (!$?) { exit -1 }
@@ -132,25 +132,26 @@ function restore( $BackupName="vagrantInit" ) {
     if (!$?) { exit -1 }
 }
 
-
-if ( $Command -ne "None" ) {
-    $KubernetesEnv:K8S_BOX = "$PreferredOs"
-}
-
 function all ( ){
     check
+    echo "*Check OK"
 
     destroy
+    echo "*Destroy OK"
     
     up
+    echo "*up OK"
     
     backup("vagrantInit")
+    echo "*backup OK"
 
     sleep 10 
 
     prepare
-    
+    echo "*prepare OK"
+
     install
+    echo "*install OK"
 }
 
 
