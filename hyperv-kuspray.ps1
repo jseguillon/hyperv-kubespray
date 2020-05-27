@@ -93,17 +93,15 @@ function up( ) {
 }
 
 function prepare( ) {
-    echo ( "** launching ansible-playbook --become -i /.../$KubernetesEnv.yaml /.../playbooks/$KubernetesEnv.yaml " ) | tee -a "$LaunchLog"
-    #docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml | tee -a $LaunchLog
-    docker run -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml  --extra-vars '@/opt/hyperv-kubespray/inventory/kubespray.config.json' | tee -a $LaunchLog
+    echo ( "** launching ansible-playbook --become -i /.../$KubernetesEnv.yaml /.../playbooks/set-ips.yaml " ) | tee -a "$LaunchLog"
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml -e '@/opt/hyperv-kubespray/inventory/kubespray.vars.json' -e '@/opt/hyperv-kubespray/inventory/network.vars.json' -e '@/opt/hyperv-kubespray/inventory/authent.vars.json' | tee -a $LaunchLog
     if (!$?) { exit -1 }
 }
 
 function install( ) {
     # TODO : set and dowload cache dire 
-    echo ( "** launching ansible-playbook --become -i /.../minimal.yaml /.../cluster.yml" ) | tee -a "$LaunchLog"
-    #docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt && ansible-playbook $AnsibleDebug  --become -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml" | tee -a $LaunchLog
-    docker run -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml --extra-vars '@/opt/hyperv-kubespray/inventory/kubespray.config.json'" | tee -a $LaunchLog
+    echo ( "** launching ansible-playbook --become -i /...$KubernetesEnv /.../cluster.yml" ) | tee -a "$LaunchLog"
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml -e '@/opt/hyperv-kubespray/inventory/kubespray.vars.json' -e '@/opt/hyperv-kubespray/inventory/network.vars.json' -e '@/opt/hyperv-kubespray/inventory/authent.vars.json'" | tee -a $LaunchLog
     if (!$?) { exit -1 }
 }
 
@@ -112,7 +110,7 @@ function bash( ) {
     echo ( "" )
     echo ( "** Going to bash. Usefull commands : " )
     echo ( "   pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt" )
-    echo ( "   ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml --extra-vars '@/opt/hyperv-kubespray/inventory/kubespray.config.json'" )
+    echo ( "   ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml -e '@/opt/hyperv-kubespray/inventory/kubespray.vars.json' -e '@/opt/hyperv-kubespray/inventory/network.vars.json'  -e '@/opt/hyperv-kubespray/inventory/authent.vars.json'" )
     echo ( "" )
     
     docker run -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash 
@@ -141,7 +139,7 @@ function backup( $BackupName="latest" ) {
     if (!$?) { exit -1 }
 }
 
-function restore( $BackupName="vagrantInit" ) {
+function restore( $BackupName="kubernetesInit" ) {
     Get-VM | Where-Object {$_.Name -like 'k8s-*'} | ForEach-Object -Process {Restore-VMSnapshot -Confirm:$false -Name "$BackupName" -VMName $_.Name }
     if (!$?) { exit -1 }
 }
@@ -159,13 +157,16 @@ function all ( ){
     backup("vagrantInit")
     echo "*backup OK"
 
-    sleep 30 
+    sleep 3 
 
     prepare
     echo "*prepare OK"
 
     install
     echo "*install OK"
+
+    backup("kubernetesInit")
+    echo "*backup OK"
 }
 
 
