@@ -1,0 +1,12 @@
+{
+    "nodes_netplan_netmask": "24",
+    "nodes_icfg_netmask": "255.255.255.0",
+    "nodes_default_gateway": "10.233.1.1",
+    "download_run_once": true,
+    "metrics_server_enabled": true,
+    "dashboard_enabled": true,
+    "ingress_nginx_enabled": true,
+    "override_system_hostname": false,
+    "docker_version": "19.03",
+    "download_localhost": true
+  }

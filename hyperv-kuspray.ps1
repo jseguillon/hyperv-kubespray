@@ -1,6 +1,6 @@
 param (
 	[parameter( ValueFromPipeline,Mandatory=$true )]
-	[ValidateSet('destroy','up','prepare', 'install', 'all', 'restore', 'backup')]
+	[ValidateSet('destroy','up','prepare', 'install', 'all', 'restore', 'backup', 'bash')]
 	[string]$Command = 'all',
     [parameter( ValueFromPipeline )]
     [ValidateSet('xs','minimal','3_masters', '3_masters-3_nodes', 'xxl')]
@@ -20,7 +20,7 @@ if ($Debug){
 }
 
 [string] $LaunchDate = Get-Date -Format "MM-dd-yyyy-HH-mm"
-[string] $LaunchLog = "$pwd/inventory/$LaunchDate-$KubernetesEnv-$Command.log"
+[string] $LaunchLog = "$pwd/inventory/logs/$LaunchDate-$KubernetesEnv-$Command.log"
 
 if ( ("all", "destroy", "up,", "prepare", "install") -contains "$Command" ){
     if ( "$KubernetesEnv" -eq ""){
@@ -40,7 +40,7 @@ $Env:K8S_CONFIG = "$KubernetesEnv"
 
 echo ( "** Logs : $LaunchLog" )  
 echo ( "** Applying '{0}' on env *** {1} *** (PreferredOS='$PreferredOs')" -f ($Command, "$KubernetesEnv")) | tee -a "$LaunchLog"
-sleep 7
+## FIXME make countdown sleep 7
 
 function check {
 
@@ -94,17 +94,30 @@ function up( ) {
 
 function prepare( ) {
     echo ( "** launching ansible-playbook --become -i /.../$KubernetesEnv.yaml /.../playbooks/$KubernetesEnv.yaml " ) | tee -a "$LaunchLog"
-    docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml | tee -a $LaunchLog
+    #docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml | tee -a $LaunchLog
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml  --extra-vars '@/opt/hyperv-kubespray/inventory/kubespray.config.json' | tee -a $LaunchLog
     if (!$?) { exit -1 }
 }
 
 function install( ) {
     # TODO : set and dowload cache dire 
     echo ( "** launching ansible-playbook --become -i /.../minimal.yaml /.../cluster.yml" ) | tee -a "$LaunchLog"
-    docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt && ansible-playbook $AnsibleDebug  --become -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml" | tee -a $LaunchLog
+    #docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt && ansible-playbook $AnsibleDebug  --become -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml" | tee -a $LaunchLog
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml --extra-vars '@/opt/hyperv-kubespray/inventory/kubespray.config.json'" | tee -a $LaunchLog
     if (!$?) { exit -1 }
 }
 
+function bash( ) {
+    # TODO : set and dowload cache dire 
+    echo ( "" )
+    echo ( "** Going to bash. Usefull commands : " )
+    echo ( "   pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt" )
+    echo ( "   ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/inventory/$KubernetesEnv.yaml /opt/hyperv-kubespray/kubespray/cluster.yml --extra-vars '@/opt/hyperv-kubespray/inventory/kubespray.config.json'" )
+    echo ( "" )
+    
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash 
+    if (!$?) { exit -1 }
+}
 
 if ( $Help ) {
 	Clear-Host
@@ -115,6 +128,7 @@ if ( $Help ) {
 	exit -1
 }
 
+#TODO : keep copy of config in previous/current inventory (with same date as log file)
 function do_test( ) {
     # for in Envs
     # ./launch distrib 
@@ -145,7 +159,7 @@ function all ( ){
     backup("vagrantInit")
     echo "*backup OK"
 
-    sleep 10 
+    sleep 30 
 
     prepare
     echo "*prepare OK"
@@ -168,7 +182,7 @@ elseif ( "$Command" -eq "up" ){
 elseif ( "$Command" -eq "prepare" ){
     prepare
 }
-elseif ( "$Command" -eq "instal" ){
+elseif ( "$Command" -eq "install" ){
     install
 }
 elseif ( "$Command" -eq "check" ){
@@ -177,8 +191,10 @@ elseif ( "$Command" -eq "check" ){
 elseif ( "$Command" -eq "backup" ){
     backup
 }
-if ( "$Command" -eq "restore" ){
+elseif ( "$Command" -eq "restore" ){
     restore
 }
-
+elseif ( "$Command" -eq "bash" ){
+    bash
+}
 

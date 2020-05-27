@@ -9,15 +9,6 @@ all:
       ansible_user: vagrant
       ansible_ssh_pass: vagrant
       ansible_connection: ssh
-      nodes_netplan_netmask: "24" # for easy netplan config
-      nodes_icfg_netmask: "255.255.255.0" # for easy ifcg config
-      nodes_default_gateway: 10.233.1.1 # needed to avoid fail on ip_v4_detect
-      metrics_server_enabled: True
-      dashboard_enabled: True
-      ingress_nginx_enabled: True
-      #Dont apply .mshome.net domain on /etc/hostname
-      override_system_hostname: False
-      docker_version: "19.03" #/!\ Ubunutu 18 
   children:   # key order does not matter, indentation does
     k8s-cluster:
       children:
