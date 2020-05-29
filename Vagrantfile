@@ -8,9 +8,7 @@ UBUNTU18 = "generic/ubuntu1810"
 CENTOS8 = "generic/centos8"
 DEBIAN10 = "generic/debian10"
 
-config = File.join(File.dirname(__FILE__), "vagrants", ENV['K8S_CONFIG'] || 'minimal')
-
-config += ".vagrant.rb"
+config = File.join(File.dirname(__FILE__), "current", "vagrant.vars.rb")
 
 require config
 
@@ -20,33 +18,34 @@ Vagrant.configure(2) do |config|
     mac, cpus, minRam, maxRam, box, secondMac = cfg
    
     config.vm.define name do |machine|
-	    p (ENV['K8S_BOX'] || box)
       machine.vm.box = (ENV['K8S_BOX'] || box)
 	    machine.vm.hostname = name
 
 
       machine.vm.provision "shell", privileged: true, inline: <<-SHELL
-# Ok for ssh with password
+echo Ok for ssh with password
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
-# kubernetes == no swap
+echo kubernetes == no swap
 swapoff -a
 
-# k8s = no fw (for demo)
+echo k8s = no fw unless prod
 systemctl disable firewalld
 
-# anible required packages 
+echo Installing anible required packages 
 (yum install -y sshpass) || (apt-get install -y sshpass)
 
-# Centos 8 tweak - sets a default python for ansible
+echo Centos 8 tweak - sets a default python for ansible
 (grep CentOS-8 /etc/os-release && ln -s /usr/bin/python3 /usr/bin/python) || true
 
-# Centos-8 tweak - control plane interface disabled until activated from ansible
+echo Centos-8 tweak - control plane interface disabled until activated from ansible
 (grep CentOS-8 /etc/os-release && cat  >/etc/sysconfig/network-scripts/ifcfg-eth1 <<EOF
 DEVICE="eth1"
 ONBOOT="no"
 EOF
 ) || true
+
+echo Done
 SHELL
 
       # Add second interface for kubernetes control plane 

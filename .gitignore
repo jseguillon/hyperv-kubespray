@@ -3,3 +3,5 @@ venv
 inventory/credentials/
 playbooks/*.retry
 **/**.log
+kubespray_cache/
+current/
