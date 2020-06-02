@@ -3,8 +3,7 @@ param (
 	[ValidateSet('destroy','up','prepare', 'install', 'all', 'restore', 'backup', 'bash', 'init')]
 	[string]$Command = 'all',
     [parameter( ValueFromPipeline )]
-    [ValidateSet('xs','minimal','3_masters', '3_masters-3_nodes', 'xxl')]
-    [string]$KubernetesEnv = "",
+    [string]$KubernetesInfra = "",
     [parameter( ValueFromPipeline )]
     [ValidateSet('generic/centos8', 'generic/debian10', 'None')]
     [string]$PreferredOs = 'None',
@@ -40,10 +39,9 @@ else {
     $Env:K8S_BOX = ""
 }
 # Inject vagrant
-$Env:K8S_CONFIG = "$KubernetesEnv"
+$Env:K8S_CONFIG = "$KubernetesInfra"
 
 echo ( "** Logs : $LaunchLog" )  
-echo ( "** Applying '{0}' on env *** {1} *** (PreferredOS='$PreferredOs')" -f ($Command, "$KubernetesEnv")) | tee -a "$LaunchLog"
 ## FIXME make countdown sleep 7
 
 function check {
@@ -77,7 +75,7 @@ function init ( ) {
 #fixme : esnure possible envs&group_vars outside of samples 
 #TODO : avoid echo
 mkdir -Force $pwd/current/
-copy  ./samples/$KubernetesEnv.yml current/infra.yaml 
+copy  ./samples/$KubernetesInfra.yml current/infra.yaml 
 
 # launch ansible templates that renders in current/vagrant.vars.rb current/inventory.yaml + groups vars from example 
 docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  --limit=localhost /opt/hyperv-kubespray/playbooks/preconfig.yaml -e '@/opt/hyperv-kubespray/current/infra.yaml'
@@ -92,28 +90,31 @@ function destroy( ) {
     #FIXME : export ENV for config
     #ENV['K8S_CONFIG'] = minimal
     vagrant destroy -f | tee -a "$LaunchLog"
-    if (!$?) { exit -1 }
+    if (!$?) { echo "Exiting $?";exit -1 }
+    echo "destroy done" 
 }
 
 function up( ) {
     echo ( "** launching vagrant up" )
-    #FIXME : export ENV for config
-    #ENV['K8S_CONFIG'] = minimal
     vagrant up | tee -a "$LaunchLog"
-    if (!$?) { exit -1 }
+    if (!$?) { echo "Exiting $?"; exit -1 }
+    echo "up done"
 }
 
 function prepare( ) {
-    echo ( "** launching ansible-playbook --become -i /.../$KubernetesEnv.yaml /.../playbooks/set-ips.yaml " ) | tee -a "$LaunchLog"
+    echo ( "** launching ansible-playbook --become -i /.../$KubernetesInfra.yaml /.../playbooks/set-ips.yaml " ) | tee -a "$LaunchLog"
+    
     docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock"  -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json' -e '@/opt/hyperv-kubespray/config/authent.vars.json' | tee -a $LaunchLog
-    if (!$?) { exit -1 }
+    if (!$?) { echo "Exiting $?"; exit -1 }
+    echo "prepare done"
 }
 
 function install( ) {
     # TODO : set and dowload cache dire 
-    echo ( "** launching ansible-playbook --become -i /...$KubernetesEnv /.../cluster.yml" ) | tee -a "$LaunchLog"
+    echo ( "** launching ansible-playbook --become -i /...$KubernetesInfra /.../cluster.yml" ) | tee -a "$LaunchLog"
     docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/kubespray/cluster.yml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json' -e '@/opt/hyperv-kubespray/config/authent.vars.json'" | tee -a $LaunchLog
-    if (!$?) { exit -1 }
+    if (!$?) { echo "Exiting $?"; exit -1 }
+    echo "install done"
 }
 
 function bash( ) {
@@ -121,11 +122,11 @@ function bash( ) {
     echo ( "" )
     echo ( "** Going to bash. Usefull commands : " )
     echo ( "   pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt" )
-    echo ( "   ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/kubespray/cluster.yml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json'  -e '@/opt/hyperv-kubespray/config/authent.vars.json'" )
+    echo ( "   ansible-playbook --network host --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/kubespray/cluster.yml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json'  -e '@/opt/hyperv-kubespray/config/authent.vars.json'" )
     echo ( "" )
 
-    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray bash
-    if (!$?) { exit -1 }
+    docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray bash
+    if (!$?) { echo "Exiting $?"; exit -1 }
 }
 
 if ( $Help ) {
@@ -151,6 +152,7 @@ function backup( $BackupName="latest" ) {
 }
 
 function restore( $BackupName="kubernetesInit" ) {
+    #TODO : pass argument for backup name in main parameters
     Get-VM | Where-Object {$_.Name -like 'k8s-*'} | ForEach-Object -Process {Restore-VMSnapshot -Confirm:$false -Name "$BackupName" -VMName $_.Name }
     if (!$?) { exit -1 }
 }
@@ -168,13 +170,11 @@ function all ( ){
     up
     echo "*up OK"
 
-    backup("vagrantInit")
-    echo "*backup OK"
-
-    sleep 3
-
     prepare
     echo "*prepare OK"
+
+    backup("prepared")
+    echo "*backup OK"
 
     install
     echo "*install OK"
