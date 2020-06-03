@@ -1,6 +1,12 @@
 ---
 - hosts: localhost
   tasks: 
+  - name: render hv-spray template
+    template: src=/opt/hyperv-kubespray/current/infra.yaml dest=/opt/hyperv-kubespray/current/infra.yaml.rendered
+    delegate_to: localhost
+  - name: include now rendered infra
+    include_vars: 
+      file: /opt/hyperv-kubespray/current/infra.yaml.rendered
   - name: create vagrant env
     template: src=/opt/hyperv-kubespray/templates/vagrant.vars.rb.j2 dest=/opt/hyperv-kubespray/current/vagrant.vars.rb
     delegate_to: localhost

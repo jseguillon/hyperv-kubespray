@@ -1,18 +1,22 @@
+# (Test-Connection -ComputerName $env:computername -count 1).ipv4address.IPAddressToString
 param (
 	[parameter( ValueFromPipeline,Mandatory=$true )]
-	[ValidateSet('destroy','up','prepare', 'install', 'all', 'restore', 'backup', 'bash', 'init')]
+	[ValidateSet('destroy','up','prepare', 'install', 'start', 'restore', 'backup', 'bash', 'init', 'startVMs', 'stopVMs')]
 	[string]$Command = 'all',
     [parameter( ValueFromPipeline )]
     [string]$KubernetesInfra = "",
     [parameter( ValueFromPipeline )]
     [ValidateSet('generic/centos8', 'generic/debian10', 'None')]
     [string]$PreferredOs = 'None',
+    [switch]$DestroyCurrent,
 	[switch]$Hide,
 	[switch]$Help
 )
 
 [bool]$Debug = ( $PSBoundParameters.ContainsKey( 'Debug' ) )
-[bool]$Force = ( $PSBoundParameters.ContainsKey( 'Force' ) )
+#TODO for destroy plus prompt
+[bool]$Force = ( $PSBoundParameters.ContainsKey( 'Force' ) ) 
+[bool]$DestroyCurrent = ( $PSBoundParameters.ContainsKey( 'DestroyCurrent' ) ) 
 
 [String]$AnsibleDebug = ""
 if ($Debug){
@@ -22,16 +26,21 @@ if ($Debug){
 [string] $LaunchDate = Get-Date -Format "MM-dd-yyyy-HH-mm"
 
 # TODO : avoid echo 
-mkdir -Force $pwd/current/logs/
-[string] $LaunchLog = "$pwd/current/logs/$LaunchDate-$Command.log"
-
-if ( ("all", "init") -contains "$Command" ){
-    if ( "$KubernetesEnv" -eq ""){
-        echo "Please provide env as second script parameter"
-        exit -1
-    }
+if ( ! [System.IO.Directory]::Exists("$pwd\current") ) { 
+    echo "* create 'current' dir' *"
+    echo ""
+    mkdir $pwd/current/logs/
+}
+if ( ! [System.IO.Directory]::Exists("$pwd\current\logs") ) {
+    echo "* create 'current\logs' dir' *"
+    echo ""
+    mkdir $pwd/current/logs/
 }
 
+# Logfile name
+[string] $LaunchLog = "$pwd/current/logs/$LaunchDate-$Command.log"
+
+# FIXME : $PreferredOs no more handled via template => remove or inject in template ? 
 if ( $PreferredOs -ne "None" ) {
     $Env:K8S_BOX = "$PreferredOs"
 }
@@ -41,23 +50,29 @@ else {
 # Inject vagrant
 $Env:K8S_CONFIG = "$KubernetesInfra"
 
-echo ( "** Logs : $LaunchLog" )  
+echo ( "** Logs : $LaunchLog" )
 ## FIXME make countdown sleep 7
 
 function check {
+
+    $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    if ( ! $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) ) {
+        Write-Host ( "** ERROR *** Please launch Powershell as administrator" ) 
+        exit -1
+    }
 
     if( (Get-WindowsOptionalFeature -Online -FeatureName *hyperv* |  Measure-Object -Line).Lines -eq 0 ) {
         Write-Host ( "** ERROR *** Please install and acivate HyperV" ) 
         exit -1
     }
 
-    vagrant version
+    $checkvagrant = vagrant -v
     if(!$?) { 
         Write-Host ( "** ERROR *** Please install vagrant" ) 
         exit -1
     }
 
-    docker version
+    $checkDocker = docker version
     if(!$?) { 
         Write-Host ( "** ERROR *** Please install and start docker" )
         exit -1
@@ -65,22 +80,25 @@ function check {
 }
 
 ##TODO : check_paths
-##TODO : check mem 
-##TODO  rewrite as dump for vagrant and hosts.yaml ??? yes base + concat for invent! 
+##TODO : check mem
+##TODO  rewrite as dump for vagrant and hosts.yaml ??? yes base + concat for invent!
 
 function init ( ) {
-#TODO : test if current exists
-#TODO : if so, ask for destroy
+    #TODO, *important* : validate config against JSON Schema 
 
-#fixme : esnure possible envs&group_vars outside of samples 
-#TODO : avoid echo
-mkdir -Force $pwd/current/
-copy  ./samples/$KubernetesInfra.yml current/infra.yaml 
+    #TODO : test kubespray/plugins/mitogen if not exists => ansible-playbook -c local /opt/hyperv-kubespray/kubespray/mitogen.yml -vv 
 
-# launch ansible templates that renders in current/vagrant.vars.rb current/inventory.yaml + groups vars from example 
-docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  --limit=localhost /opt/hyperv-kubespray/playbooks/preconfig.yaml -e '@/opt/hyperv-kubespray/current/infra.yaml'
-# TODO avoid anoying powershel message
-copy -Force ./samples/group_vars/ current/
+
+    #TODO : avoid echo
+    mkdir -Force $pwd/current/
+
+    #TODO : ensure possible envs&group_vars outside of samples
+    copy  ./samples/$KubernetesInfra.yml current/infra.yaml 
+
+    # launch ansible templates that renders in current/vagrant.vars.rb current/inventory.yaml + groups vars from example 
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  --limit=localhost /opt/hyperv-kubespray/playbooks/preconfig.yaml
+
+    Copy-Item ./samples/ -Destination current/ -Recurse
 }
 
 ## FIXME : dont continue if CTL+C during any phase
@@ -89,8 +107,13 @@ function destroy( ) {
     echo "** launching vagrant destroy -f" | tee -a "$LaunchLog"
     #FIXME : export ENV for config
     #ENV['K8S_CONFIG'] = minimal
+    # TODO : also move current to old 
     vagrant destroy -f | tee -a "$LaunchLog"
     if (!$?) { echo "Exiting $?";exit -1 }
+
+    echo "Moving current to old-$LaunchDate"
+    Get-ChildItem -Path "$pwd/current" -Recurse |  Move-Item -Destination "old-$LaunchDate" -Force 
+
     echo "destroy done" 
 }
 
@@ -106,11 +129,14 @@ function prepare( ) {
     
     docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock"  -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json' -e '@/opt/hyperv-kubespray/config/authent.vars.json' | tee -a $LaunchLog
     if (!$?) { echo "Exiting $?"; exit -1 }
+    # echo fatal: [k8s-server-2.mshome.net]: UNREACHABLE! => {"changed": false, "msg": "Failed to connect to the host via ssh: Shared connection to k8s-server-2.mshome.net closed.", "unreachable": true}
+    # =>  try again prepare and install
+    # Pleas ensure your not connected to Any VPN
     echo "prepare done"
 }
 
 function install( ) {
-    # TODO : set and dowload cache dire 
+    # TODO : set and dowload cache dire
     echo ( "** launching ansible-playbook --become -i /...$KubernetesInfra /.../cluster.yml" ) | tee -a "$LaunchLog"
     docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/kubespray/cluster.yml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json' -e '@/opt/hyperv-kubespray/config/authent.vars.json'" | tee -a $LaunchLog
     if (!$?) { echo "Exiting $?"; exit -1 }
@@ -118,7 +144,7 @@ function install( ) {
 }
 
 function bash( ) {
-    # TODO : set and dowload cache dire 
+    # TODO : set and dowload cache dire
     echo ( "" )
     echo ( "** Going to bash. Usefull commands : " )
     echo ( "   pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt" )
@@ -141,7 +167,7 @@ if ( $Help ) {
 #TODO : keep copy of config in previous/current inventory (with same date as log file)
 function do_test( ) {
     # for in Envs
-    # ./launch distrib 
+    # ./launch distrib
     # ./launch distrib2
     # ./launch no prefered
 }
@@ -157,37 +183,109 @@ function restore( $BackupName="kubernetesInit" ) {
     if (!$?) { exit -1 }
 }
 
-function all ( ){
+function startVMs ( ) {
+    Get-VM | Where-Object {$_.Name -like 'k8s-*' -and $_.State -ne "Running" } | ForEach-Object -Process { Start-VM $_.Name }
+}
+
+function stopVMs ( ) {
+    Get-VM | Where-Object {$_.Name -like 'k8s-*'} | ForEach-Object -Process {Stop-VM  $_.Name }
+}
+
+function bashAll( $AdHocCmd="" ) {
+    # TODO run adhoc command on inventory
+
+}
+
+#TODO function stop and #function start (handle one vm): Get-VM | Where-Object {$_.Name -like 'k8s-*'} | ForEach-Object -Process { Start-VM -Name $_.Name }
+
+
+#TODO : rename as "start", deal with current plus option --destroy  
+function run ( ) {
     check
-    echo "*Check OK"
+    echo ""
+    echo "*Check OK*"
 
-    destroy
-    echo "*Destroy OK"
+    # Is this a new cluster ? 
+    $newEnv = 0
+    if ( [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") ) {
+        if ( $DestroyCurrent ){
+            if ( "$KubernetesInfra" -eq ""){
+                echo "Please provide env as second script parameter. Example : start minimal -DestroyCurrent "
+                exit -1
+            }
+            
+            echo "Found current env, destroying..."
+            destroy
 
-    init
-    echo "*init OK"
+            # Destroyed => new VMs needed
+            $newEnv=1
+        } 
+    }
 
-    up
-    echo "*up OK"
 
-    prepare
-    echo "*prepare OK"
+    # no current vagrant conf ? creates plus ansible inventory
+    if ( ! [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") ) {
+        init
+        echo "*init OK*"
+        echo ""
 
-    backup("prepared")
-    echo "*backup OK"
+        # New vagrant => new VMs needed
+        $newEnv=1
+    }
 
-    install
-    echo "*install OK"
+    if ( $newEnv ) {
+        up
 
-    backup("kubernetesInit")
-    echo "*backup OK"
+        echo "*up OK*"
+        echo ""
+    }
+    # not new VMS ? => start without vagrant (too slow) 
+    else {
+        startVMs
+        
+        echo "*quick start VMs OK*"
+        echo ""
+    }
+
+    #cluster was not prepared ? run playbook 
+    if ( ! [System.IO.File]::Exists("$pwd\current\prepared.ok") ) {
+        prepare
+        echo "*prepare OK*"
+        
+        echo "ok" > $pwd\current\prepared.ok
+
+        backup("prepared")
+        echo "*backup OK*"    
+        echo ""
+    }
+    else {
+        echo "Platform is already prepared for kubernetes"
+    }
+
+    # kubernetes not installed ? run cluster playbook 
+    if ( ! [System.IO.File]::Exists("$pwd\current\installed.ok") ) {
+        install
+        echo "*install OK*"
+
+        echo "ok" > $pwd\current\installed.ok
+    
+        backup("kubernetesInit")
+        echo "*backup OK*"
+        echo ""
+        }
+        else {
+            echo "Kubernetes already installed. Nothing to do."
+            echo ""
+        }
+
+        echo ""
+        echo "*Kubernetes now running.*"
 }
 
 
-if ( "$Command" -eq "all" ){
-    all 
+if ( "$Command" -eq "start" ){
+    run #start is reserved kyword in powershell
 }
-
 elseif ( "$Command" -eq "destroy" ){
     destroy 
 }
@@ -214,5 +312,11 @@ elseif ( "$Command" -eq "bash" ){
 }
 elseif ( "$Command" -eq "init" ){
     init
+}
+elseif ( "$Command" -eq "startVMs" ){
+    startVMs
+}
+elseif ( "$Command" -eq "stopVMs" ){
+    stopVMs
 }
 
