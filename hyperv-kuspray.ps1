@@ -25,20 +25,28 @@ if ($Debug){
 
 [string] $LaunchDate = Get-Date -Format "MM-dd-yyyy-HH-mm"
 
-# TODO : avoid echo 
 if ( ! [System.IO.Directory]::Exists("$pwd\current") ) { 
     echo "* create 'current' dir' *"
     echo ""
-    mkdir $pwd/current/logs/
+    $ret = mkdir $pwd/current/
+    if(!$?) { 
+        echo "** ERROR *** could not create  $pwd/current/ directory. $ret" 
+        exit -1
 }
-if ( ! [System.IO.Directory]::Exists("$pwd\current\logs") ) {
+
+}
+if ( ! [System.IO.Directory]::Exists("$pwd\logs") ) {
     echo "* create 'current\logs' dir' *"
     echo ""
-    mkdir $pwd/current/logs/
+    $ret=mkdir $pwd/logs/
+    if(!$?) { 
+        echo "** ERROR *** could not create  $pwd/current/ directory. $ret" 
+        exit -1
+}
 }
 
 # Logfile name
-[string] $LaunchLog = "$pwd/current/logs/$LaunchDate-$Command.log"
+[string] $LaunchLog = "$pwd/logs/$LaunchDate-$Command.log"
 
 # FIXME : $PreferredOs no more handled via template => remove or inject in template ? 
 if ( $PreferredOs -ne "None" ) {
