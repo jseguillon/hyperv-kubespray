@@ -21,6 +21,9 @@ Vagrant.configure(2) do |config|
       machine.vm.box = (ENV['K8S_BOX'] || box)
 	    machine.vm.hostname = name
 
+#TODO shell : test internet access (or create box with packages ? )
+
+# TODO Important! if found images in copy it right now ? 
 
       machine.vm.provision "shell", privileged: true, inline: <<-SHELL
 echo Ok for ssh with password

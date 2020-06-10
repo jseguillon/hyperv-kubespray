@@ -1,0 +1,134 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "http://example.com/example.json",
+    "type": "object",
+    "title": "The root schema",
+    "description": "The root schema comprises the entire JSON document.",
+    "default": {},
+    "examples": [
+        {
+            "servers": [
+                {
+                    "name": "k8s-server-1",
+                    "roles": [
+                        "etcd",
+                        "master",
+                        "node"
+                    ],
+                    "cpu": 2,
+                    "memMin": 2048,
+                    "memMax": 4096,
+                    "vagrantBox": "generic/centos8"
+                },
+                {
+                    "name": "k8s-server-2",
+                    "roles": [
+                        "node"
+                    ],
+                    "cpu": 2,
+                    "memMin": 2048,
+                    "memMax": 4096,
+                    "vagrantBox": "generic/debian10"
+                }
+            ]
+        }
+    ],
+    "required": [
+        "servers"
+    ],
+    "additionalProperties": true,
+    "properties": {
+        "servers": {
+            "type": "array",
+            "title": "Array of servers",
+            "default": [],
+            "examples": [
+                [
+                    {
+                        "name": "k8s-server-1",
+                        "roles": [
+                            "etcd",
+                            "master",
+                            "node"
+                        ],
+                        "cpu": 2,
+                        "memMin": 2048,
+                        "memMax": 4096,
+                        "vagrantBox": "generic/centos8"
+                    },
+                    {
+                        "name": "k8s-server-2",
+                        "roles": [
+                            "node"
+                        ],
+                        "cpu": 2,
+                        "memMin": 2048,
+                        "memMax": 4096,
+                        "vagrantBox": "generic/debian10"
+                    }
+                ]
+            ],
+            "additionalItems": true,
+            "items": {
+                "anyOf": [
+                    {
+                        "type": "object",
+                        "title": "Servers",
+                        "default": {},
+                        "required": [
+                            "name",
+                            "roles",
+                            "cpu",
+                            "memMin",
+                            "memMax",
+                            "vagrantBox"
+                        ],
+                        "additionalProperties": true,
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "title": "Server name",
+                                "description": "Not Ok : '-foo,-foo-bar', 'foo_bar', '1foo' / Ok : 'foo', 'foo-bar', 'foo-1', 'foo1', 'foo-bar-bar', 'foo-1-2-bar'. ",
+                                "pattern": "^([a-zA-Z])*([A-Za-z]|[A-Za-z][A-Za-z0-9\\-]*[A-Za-z0-9])$"
+                            },
+                            "roles": {
+                                "type": "array",
+                                "title": "Ensure you got an odd number of etcds (1, 3, 5, ...)",
+                                "additionalItems": false,                            
+                                "items": {
+                                    "title": "Ensure you got an odd number of etcds (1, 3, 5, ...)",
+                                    "type": "string",
+                                    "enum": [ "master", "etcd", "node" ]
+                                    }
+                            },
+                            "cpu": {
+                                "type": "integer",
+                                "title": "Number of virtual Cpu",
+                                "default": 0,
+                                "examples": [ 2 ]
+                            },
+                            "memMin": {
+                                "type": "integer",
+                                "title": "Min dynamic memory",
+                                "default": 2048,
+                                "examples": [ 2048 ]
+                            },
+                            "memMax": {
+                                "type": "integer",
+                                "title": "Max dynamic memory",
+                                "default": 4096,
+                                "examples": [ 4096 ] 
+                            },
+                            "vagrantBox": {
+                                "type": "string",
+                                "title": "vagrantBox",
+                                "default": "",
+                                "examples": [ "generic/centos8", "generic/debian10" ]
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

@@ -1,5 +1,7 @@
-.\hyperv-kuspray.ps1 all xs 
+.\hyperv-kuspray.ps1 all minimal 
 .\hyperv-kuspray.ps1 restore
+
+# see poshgit module
 
  # mount and set temp for downloads 
  TODO : 

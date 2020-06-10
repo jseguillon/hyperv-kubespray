@@ -15,3 +15,15 @@ servers:
     memMin: 2048
     memMax: 4096
     vagrantBox: "generic/debian10"  
+
+##also supports templates 
+# {% for i in range(30) %}
+#   - name: k8s-server-{{ i }}
+#     roles: 
+#       - master
+#       - node
+#     cpu: 2
+#     memMin: 2048
+#     memMax: 4096
+#     vagrantBox: "generic/centos8"
+# {% endfor %}  
