@@ -2,10 +2,10 @@ import yaml, json
 from jsonschema import validate
 #pip install jsonschema
 if __name__ == '__main__':
-    with open("/opt/hyperv-kubespray/current/infra.yaml.rendered", "r") as fichier:
+    with open("/opt/winspray/current/infra.yaml.rendered", "r") as fichier:
         dict_to_test = yaml.load(fichier)
 
-    with open("/opt/hyperv-kubespray/python/schema3.json", "r") as fichier:
+    with open("/opt/winspray/python/schema3.json", "r") as fichier:
         dict_valid = json.load(fichier)
 
     try:

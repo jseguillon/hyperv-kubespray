@@ -55,7 +55,7 @@ function Prepare-Winspray-Cluster( ) {
     Write-Host ( "# Winspray - preparing VMs for kubernetes" )
     Write-Verbose ( " ### Winspray - launching ansible-playbook --become -i /.../$KubernetesInfra.yaml /.../playbooks/set-ips.yaml " )
 
-    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock"  -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json' -e '@/opt/hyperv-kubespray/config/authent.vars.json'
+    docker run --rm -v "/var/run/docker.sock:/var/run/docker.sock"  -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/playbooks/set-ips.yaml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - VMs prepared for kubespray `n" ) -ForegroundColor DarkGreen
 
@@ -66,7 +66,7 @@ function Install-Winspray-Cluster( ) {
 
     Write-Host ( "# Winspray - install kubernetes" )
     Write-Verbose ( "** launching ansible-playbook --become -i /...$KubernetesInfra /.../cluster.yml" )
-    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/kubespray/cluster.yml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json' -e '@/opt/hyperv-kubespray/config/authent.vars.json'"
+    docker run  --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray bash -c "pip install -r /opt/winspray/kubespray/requirements.txt 1> /dev/null && ansible-playbook $AnsibleDebug  --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/kubespray/cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json' -e '@/opt/winspray/config/authent.vars.json'"
     if (!$?) { throw "Exiting $?" }
     Write-Host ( "## Winspray - kubernetes installed `n" ) -ForegroundColor DarkGreen
 }
@@ -74,11 +74,11 @@ function Install-Winspray-Cluster( ) {
 function Do-Winspray-Bash( ) {
     Write-Host ( "" )
     Write-Host ( "** Going to bash. Here are usefull commands : " )
-    Write-Host ( "   pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt" )
-    Write-Host ( "   ansible-playbook --network host --become  -i /opt/hyperv-kubespray/current/hosts.yaml /opt/hyperv-kubespray/kubespray/cluster.yml -e '@/opt/hyperv-kubespray/config/kubespray.vars.json' -e '@/opt/hyperv-kubespray/config/network.vars.json'  -e '@/opt/hyperv-kubespray/config/authent.vars.json'" )
+    Write-Host ( "   pip install -r /opt/winspray/kubespray/requirements.txt" )
+    Write-Host ( "   ansible-playbook --network host --become  -i /opt/winspray/current/hosts.yaml /opt/winspray/kubespray/cluster.yml -e '@/opt/winspray/config/kubespray.vars.json' -e '@/opt/winspray/config/network.vars.json'  -e '@/opt/winspray/config/authent.vars.json'" )
     Write-Host ( "" )
 
-    docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray bash
+    docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/winspray -t quay.io/kubespray/kubespray bash
     if (!$?) { throw "Exiting $?" }
 }
 
@@ -120,14 +120,14 @@ function New-Winspray-Inventory ( ) {
 
     #TODO, *important* : validate config against JSON Schema
 
-    #TODO : test kubespray/plugins/mitogen if not exists => ansible-playbook -c local /opt/hyperv-kubespray/kubespray/mitogen.yml -vv
+    #TODO : test kubespray/plugins/mitogen if not exists => ansible-playbook -c local /opt/winspray/kubespray/mitogen.yml -vv
 
     #TODO : ensure possible envs&group_vars outside of samples
     copy  ./samples/$KubernetesInfra.yml current/infra.yaml
     if (!$?) {  throw ( "** ERROR *** could not find  ./samples/$KubernetesInfra.yml or could not copy it to 'current/' " ) }
     
     # launch ansible templates that renders in current/vagrant.vars.rb current/inventory.yaml + groups vars from example
-    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  --limit=localhost /opt/hyperv-kubespray/playbooks/preconfig.yaml
+    docker run -v "/var/run/docker.sock:/var/run/docker.sock" --rm -v ${PWD}:/opt/winspray -it quay.io/kubespray/kubespray ansible-playbook $AnsibleDebug --become  --limit=localhost /opt/winspray/playbooks/preconfig.yaml
 
     if (!$?) {  throw ( "** ERROR *** Found error while creating inventory" ) }
 

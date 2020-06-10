@@ -1,4 +1,4 @@
-### start-process -NoNewWindow  powershell.exe { C:\temp\hyperv-kubespray-master\testServer2.ps1 } 
+### start-process -NoNewWindow  powershell.exe { C:\temp\winspray-master\testServer2.ps1 } 
 
 
 

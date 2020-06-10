@@ -6,7 +6,7 @@
  # mount and set temp for downloads 
  TODO : 
  
- docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray -ansible-playbook --become -i /opt/hyperv-kubespray/inventory/minimal.yaml /kubespray/cluster.yml
+ docker run -v ${PWD}:/opt/winspray -it quay.io/kubespray/kubespray -ansible-playbook --become -i /opt/winspray/inventory/minimal.yaml /kubespray/cluster.yml
  
  # All
 
@@ -17,7 +17,7 @@
 
 
 vagrant destroy -f; vagrant up; sleep 120; 
-docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook --become -i /opt/hyperv-kubespray/inventory/minimal.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml; docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt && ansible-playbook --become -i /opt/hyperv-kubespray/inventory/minimal.yaml /opt/hyperv-kubespray/kubespray/cluster.yml" 
+docker run -v ${PWD}:/opt/winspray -it quay.io/kubespray/kubespray ansible-playbook --become -i /opt/winspray/inventory/minimal.yaml /opt/winspray/playbooks/set-ips.yaml; docker run -v ${PWD}:/opt/winspray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/winspray/kubespray/requirements.txt && ansible-playbook --become -i /opt/winspray/inventory/minimal.yaml /opt/winspray/kubespray/cluster.yml" 
 #RODO : create commands as aliases 
 
 
@@ -34,4 +34,4 @@ fatal: [k8s-node-1.mshome.net -> k8s-node-1.mshome.net]: FAILED! => {"changed": 
 
 
 
-date; vagrant destroy -f; vagrant up;  echo "Vagrant up, sleep a while..."; sleep 30; date ; docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray ansible-playbook --become -i /opt/hyperv-kubespray/inventory/minimal.yaml /opt/hyperv-kubespray/playbooks/set-ips.yaml; date; docker run -v ${PWD}:/opt/hyperv-kubespray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/hyperv-kubespray/kubespray/requirements.txt && ansible-playbook --become -i /opt/hyperv-kubespray/inventory/minimal.yaml /opt/hyperv-kubespray/kubespray/cluster.yml"
+date; vagrant destroy -f; vagrant up;  echo "Vagrant up, sleep a while..."; sleep 30; date ; docker run -v ${PWD}:/opt/winspray -it quay.io/kubespray/kubespray ansible-playbook --become -i /opt/winspray/inventory/minimal.yaml /opt/winspray/playbooks/set-ips.yaml; date; docker run -v ${PWD}:/opt/winspray -it quay.io/kubespray/kubespray bash -c "pip install -r /opt/winspray/kubespray/requirements.txt && ansible-playbook --become -i /opt/winspray/inventory/minimal.yaml /opt/winspray/kubespray/cluster.yml"
