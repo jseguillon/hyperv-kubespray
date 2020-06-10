@@ -21,7 +21,6 @@ Vagrant.configure(2) do |config|
       machine.vm.box = (ENV['K8S_BOX'] || box)
 	    machine.vm.hostname = name
 
-
       machine.vm.provision "shell", privileged: true, inline: <<-SHELL
 echo Ok for ssh with password
 sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config

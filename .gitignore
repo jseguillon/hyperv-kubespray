@@ -5,3 +5,5 @@ playbooks/*.retry
 **/**.log
 kubespray_cache/
 current/
+old-*
+logs
