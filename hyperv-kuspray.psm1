@@ -1,25 +1,3 @@
-# Import-Module -DisableNameChecking
-function Prepare-Winspray-Runtime () {
-    if ( ! [System.IO.Directory]::Exists("$pwd\current") ) {
-        Write-Verbose ( "### Winspray - create 'current' dir" )
-
-        $ret = mkdir $pwd/current/ | Out-Null
-        if(!$?) { throw ("** ERROR *** could not create  $pwd/current/ directory. $ret" ) }
-
-    }
-    if ( ! [System.IO.Directory]::Exists("$pwd\logs") ) {
-        Write-Verbose ( "### Winspray - create 'logs' dir" )
-
-        $ret=mkdir $pwd/logs/ | Out-Null
-        if(!$?) { throw ("** ERROR *** could not create  $pwd/logs/ directory. $ret" ) }
-    }
-
-    # Logfile name
-    $LaunchDate = Get-Date -Format "MM-dd-yyyy-HH-mm"
-    $LaunchLog = "$pwd/logs/$LaunchDate.log"
-    return $LaunchLog
-}
-
 function Remove-Winspray-Cluster {
     Write-Host ( "# Winspray - destroying current VMs")
 
@@ -46,6 +24,7 @@ function Backup-Winspray-Cluster {
     if (!$?) { exit -1 }
     Write-Host ( "## Winspray - backup '$BackupName' ok `n") -ForegroundColor DarkGreen
 }
+
 function Restore-Winspray-Cluster{
     [CmdletBinding()]
     Param(
@@ -57,6 +36,7 @@ function Restore-Winspray-Cluster{
     if (!$?) { exit -1 }
     Write-Host ( "## Winspray - restore '$BackupName' ok `n") -ForegroundColor DarkGreen
 }
+
 function Start-Winspray-Cluster {
     Write-Host ("# Winspray - start existing VMS" )
     Get-VM | Where-Object {$_.Name -like 'k8s-*' -and $_.State -ne "Running" } | ForEach-Object -Process { Start-VM $_.Name }
@@ -68,6 +48,7 @@ function Stop-Winspray-Cluster {
     Get-VM | Where-Object {$_.Name -like 'k8s-*'} | ForEach-Object -Process {Stop-VM  $_.Name }
     Write-Host ( "## Winspray - VMS started ok `n")  -ForegroundColor DarkGreen
 }
+
 function Prepare-Winspray-Cluster( ) {
     $AnsibleDebug = If ($PSBoundParameters.ContainsKey( 'Debug' )) {"-vv"} Else {""} 
 
@@ -79,6 +60,7 @@ function Prepare-Winspray-Cluster( ) {
     Write-Host ( "## Winspray - VMs prepared for kubespray `n" ) -ForegroundColor DarkGreen
 
 }
+
 function Install-Winspray-Cluster( ) {
     $AnsibleDebug = If ($PSBoundParameters.ContainsKey( 'Debug' )) {"-vv"} Else {""} 
 
@@ -99,15 +81,6 @@ function Do-Winspray-Bash( ) {
     docker run -it --rm -v "/var/run/docker.sock:/var/run/docker.sock" -v ${PWD}:/opt/hyperv-kubespray -t quay.io/kubespray/kubespray bash
     if (!$?) { throw "Exiting $?" }
 }
-
-function do_test( ) {
-    # TODO
-    # for in Envs
-    # ./launch distrib
-    # ./launch distrib2
-    # ./launch no prefered
-}
-
 
 function Test-Winspray-Env {
     ##TODO : check_paths
@@ -180,6 +153,12 @@ function New-Winspray-Cluster () {
     [bool]$Force = ( $PSBoundParameters.ContainsKey( 'Force' ) )
     Test-Winspray-Env
     
+    if ( ! [System.IO.Directory]::Exists("$pwd\current") ) {
+        Write-Verbose ( "### Winspray - create 'current' dir" )
+        $ret = mkdir $pwd/current/ | Out-Null
+        if(!$?) { throw ("** ERROR *** could not create  $pwd/current/ directory. $ret" ) }
+    }
+
     # Existing vagrant config file and Force flag ? : ok to destroy if we got new target
     if ( [System.IO.File]::Exists("$pwd\current\vagrant.vars.rb") -and (! $ContinueExisting ) ) {
         if ( $Force ) {
@@ -234,5 +213,4 @@ function New-Winspray-Cluster () {
     Write-Host ("# Winspray - Time to start  {0}h {1}m {2}s" -f  ($timeExec.Hours, $timeExec.Minutes, $timeExec.Seconds ))
 }
 
-
-Export-ModuleMember -Function New-Winspray-Cluster, Remove-Winspray-Cluster, Start-Winspray-Cluster, Backup-Winspray-Cluster, Restore-Winspray-Cluster, Stop-Winspray-Cluster, Prepare-Winspray-Hosts, Install-Winspray-Hosts, Do-Winspray-Bash, Test-Winspray-Env, Set-Winspray-Inventory, Prepare-Winspray-Runtime
+Export-ModuleMember -Function New-Winspray-Cluster, Remove-Winspray-Cluster, Start-Winspray-Cluster, Backup-Winspray-Cluster, Restore-Winspray-Cluster, Stop-Winspray-Cluster, Prepare-Winspray-Hosts, Install-Winspray-Hosts, Do-Winspray-Bash, Test-Winspray-Env, Set-Winspray-Inventory, Prepare-Winspray-Runtime, Do-Winspray-Bash
